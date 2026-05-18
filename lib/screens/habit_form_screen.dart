@@ -299,9 +299,12 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
           ],
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
+      body: Column(
         children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+              children: [
           TextField(
             controller: _name,
             textCapitalization: TextCapitalization.sentences,
@@ -541,13 +544,21 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
               onChanged: (v) => setState(() => _archived = v),
             ),
           ],
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: FilledButton(
-              onPressed: _save,
-              child: Text(_isEdit ? 'Save changes' : 'Create habit'),
+              ],
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: FilledButton(
+                  onPressed: _save,
+                  child: Text(_isEdit ? 'Save changes' : 'Create habit'),
+                ),
+              ),
             ),
           ),
         ],

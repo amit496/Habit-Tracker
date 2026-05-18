@@ -30,6 +30,12 @@ class AppTheme {
         : lightMuted;
   }
 
+  /// Scrollable screen padding; extra bottom inset for 3-button nav bars.
+  static EdgeInsets screenPadding(BuildContext context) {
+    final bottom = MediaQuery.paddingOf(context).bottom;
+    return EdgeInsets.fromLTRB(20, 20, 20, 20 + bottom);
+  }
+
   static BoxDecoration cardDecoration(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return BoxDecoration(

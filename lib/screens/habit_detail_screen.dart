@@ -54,7 +54,7 @@ class HabitDetailScreen extends StatelessWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        padding: AppTheme.screenPadding(context).copyWith(top: 8),
         children: [
           Row(
             children: [
