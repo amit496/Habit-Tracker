@@ -71,6 +71,34 @@ class AnalyticsService {
     return done / scheduled.length;
   }
 
+  /// One cell per day for the last 365 days. Level 0 = no habits scheduled.
+  static List<int> yearHeatmapLevels(
+    List<HabitModel> habits,
+    List<HabitLogModel> allLogs,
+  ) {
+    final levels = <int>[];
+    final today = DateOnly.today();
+    for (var i = 364; i >= 0; i--) {
+      final day = today.subtract(Duration(days: i));
+      final scheduled = habits.where((h) => h.isScheduledOn(day)).toList();
+      if (scheduled.isEmpty) {
+        levels.add(0);
+        continue;
+      }
+      final rate = _rateForDay(habits, allLogs, day);
+      if (rate <= 0) {
+        levels.add(1);
+      } else if (rate < 0.34) {
+        levels.add(2);
+      } else if (rate < 0.67) {
+        levels.add(3);
+      } else {
+        levels.add(4);
+      }
+    }
+    return levels;
+  }
+
   static int completionsThisMonth(List<HabitLogModel> logs) {
     final now = DateTime.now();
     return logs.where((l) {

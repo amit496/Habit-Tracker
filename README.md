@@ -44,8 +44,8 @@ _Add screenshots here after publishing._
 ### Run
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/habit-flow.git
-cd habit-flow
+git clone https://github.com/amit496/Habit-Tracker.git
+cd Habit-Tracker
 flutter pub get
 flutter run
 ```

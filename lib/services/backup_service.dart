@@ -15,6 +15,7 @@ class BackupService {
     required List<HabitLogModel> logs,
     required bool isDarkMode,
     required int weekStart,
+    List<String> frozenDates = const [],
   }) {
     final payload = {
       'version': backupVersion,
@@ -23,6 +24,7 @@ class BackupService {
       'settings': {
         'isDarkMode': isDarkMode,
         'weekStart': weekStart,
+        'frozenDates': frozenDates,
       },
       'habits': habits.map((h) => h.toMap()).toList(),
       'logs': logs.map((l) => l.toMap()).toList(),
@@ -52,9 +54,14 @@ class BackupService {
     final settings = map['settings'];
     var isDarkMode = false;
     var weekStart = 1;
+    var frozenDates = <String>[];
     if (settings is Map) {
       isDarkMode = settings['isDarkMode'] == true;
       weekStart = (settings['weekStart'] as num?)?.toInt() ?? 1;
+      final rawFrozen = settings['frozenDates'];
+      if (rawFrozen is List) {
+        frozenDates = rawFrozen.map((e) => e.toString()).toList();
+      }
     }
 
     return BackupParseResult(
@@ -62,6 +69,7 @@ class BackupService {
       logs: logs,
       isDarkMode: isDarkMode,
       weekStart: weekStart,
+      frozenDates: frozenDates,
     );
   }
 
@@ -83,11 +91,13 @@ class BackupParseResult {
   final List<HabitLogModel> logs;
   final bool isDarkMode;
   final int weekStart;
+  final List<String> frozenDates;
 
   const BackupParseResult({
     required this.habits,
     required this.logs,
     required this.isDarkMode,
     required this.weekStart,
+    this.frozenDates = const [],
   });
 }

@@ -19,6 +19,10 @@ class ReminderService {
   static bool _ready = false;
   static const int _idBase = 2000;
   static const int _previewId = 9999;
+  static const int _maxIdsPerHabit = 7;
+
+  /// Vibration pattern: wait 0ms, vibrate 400ms, pause 200ms, vibrate 400ms.
+  static final Int64List _vibrationPattern = Int64List.fromList([0, 400, 200, 400]);
 
   static bool get isReady => _ready;
 
@@ -37,16 +41,32 @@ class ReminderService {
       await _plugin.initialize(
         const InitializationSettings(
           android: android,
-          iOS: DarwinInitializationSettings(),
+          iOS: DarwinInitializationSettings(
+            requestAlertPermission: true,
+            requestBadgePermission: true,
+            requestSoundPermission: true,
+          ),
         ),
       );
 
       if (Platform.isAndroid) {
         await _createAndroidChannels();
+        final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+        await androidPlugin?.requestNotificationsPermission();
+        final enabled = await androidPlugin?.areNotificationsEnabled();
+        if (enabled == false) {
+          debugPrint(
+            'ReminderService: notifications disabled — enable in system settings.',
+          );
+        }
+      }
+
+      if (Platform.isIOS) {
         await _plugin
             .resolvePlatformSpecificImplementation<
-                AndroidFlutterLocalNotificationsPlugin>()
-            ?.requestNotificationsPermission();
+                IOSFlutterLocalNotificationsPlugin>()
+            ?.requestPermissions(alert: true, badge: true, sound: true);
       }
 
       _ready = true;
@@ -57,6 +77,24 @@ class ReminderService {
       debugPrint('ReminderService init failed: $e');
       _ready = false;
     }
+  }
+
+  static Future<bool> areNotificationsEnabled() async {
+    if (Platform.isAndroid) {
+      return await _plugin
+              .resolvePlatformSpecificImplementation<
+                  AndroidFlutterLocalNotificationsPlugin>()
+              ?.areNotificationsEnabled() ??
+          false;
+    }
+    if (Platform.isIOS) {
+      final perms = await _plugin
+          .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>()
+          ?.checkPermissions();
+      return perms?.isEnabled ?? false;
+    }
+    return true;
   }
 
   static Future<void> _createAndroidChannels() async {
@@ -74,6 +112,8 @@ class ReminderService {
           description: 'Reminder tone: ${sound.label}',
           importance: Importance.high,
           playSound: true,
+          enableVibration: true,
+          vibrationPattern: _vibrationPattern,
           sound: RawResourceAndroidNotificationSound(raw),
         ),
       );
@@ -81,16 +121,17 @@ class ReminderService {
 
     await android.createNotificationChannel(
       const AndroidNotificationChannel(
-        'habit_reminders_custom',
+        'habit_reminders_v2_custom',
         'Habit reminders · Custom',
         description: 'Your own reminder audio file',
         importance: Importance.high,
         playSound: true,
+        enableVibration: true,
       ),
     );
   }
 
-  static String _channelId(String soundKey) => 'habit_reminders_$soundKey';
+  static String _channelId(String soundKey) => 'habit_reminders_v2_$soundKey';
 
   static AndroidNotificationSound? _androidSound(HabitModel habit) {
     if (habit.reminderSoundKey == ReminderSounds.customKey) {
@@ -106,7 +147,7 @@ class ReminderService {
   static NotificationDetails _detailsFor(HabitModel habit) {
     final isCustom = habit.reminderSoundKey == ReminderSounds.customKey;
     final channelId = isCustom
-        ? 'habit_reminders_custom'
+        ? 'habit_reminders_v2_custom'
         : _channelId(
             ReminderSounds.builtIn
                     .any((s) => s.key == habit.reminderSoundKey)
@@ -124,9 +165,13 @@ class ReminderService {
         importance: Importance.high,
         priority: Priority.high,
         playSound: true,
+        enableVibration: true,
+        vibrationPattern: _vibrationPattern,
         sound: sound,
       ),
       iOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
         presentSound: true,
       ),
     );
@@ -134,16 +179,33 @@ class ReminderService {
 
   static Future<void> rescheduleAll(List<HabitModel> habits) async {
     if (!_ready) return;
+    if (!await areNotificationsEnabled()) {
+      debugPrint('ReminderService: skipping schedule — permission off');
+      return;
+    }
     await _plugin.cancelAll();
-    var offset = 0;
+    var habitIndex = 0;
     for (final h in habits) {
       if (h.archived || !h.hasReminder) continue;
-      await _scheduleDaily(h, _idBase + offset);
-      offset++;
+      final baseId = _idBase + habitIndex * _maxIdsPerHabit;
+      if (h.isDaily) {
+        await _schedule(h, baseId);
+      } else {
+        var dayOffset = 0;
+        for (final weekday in h.scheduleDays) {
+          await _schedule(h, baseId + dayOffset, weekday: weekday);
+          dayOffset++;
+        }
+      }
+      habitIndex++;
     }
   }
 
-  static Future<void> _scheduleDaily(HabitModel habit, int notificationId) async {
+  static Future<void> _schedule(
+    HabitModel habit,
+    int notificationId, {
+    int? weekday,
+  }) async {
     final now = tz.TZDateTime.now(tz.local);
     var scheduled = tz.TZDateTime(
       tz.local,
@@ -153,7 +215,15 @@ class ReminderService {
       habit.reminderHour,
       habit.reminderMinute,
     );
-    if (scheduled.isBefore(now)) {
+
+    if (weekday != null) {
+      while (scheduled.weekday != weekday) {
+        scheduled = scheduled.add(const Duration(days: 1));
+      }
+      if (scheduled.isBefore(now)) {
+        scheduled = scheduled.add(const Duration(days: 7));
+      }
+    } else if (scheduled.isBefore(now)) {
       scheduled = scheduled.add(const Duration(days: 1));
     }
 
@@ -163,10 +233,12 @@ class ReminderService {
       'Time for: ${habit.name}',
       scheduled,
       _detailsFor(habit),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.wallClockTime,
-      matchDateTimeComponents: DateTimeComponents.time,
+      matchDateTimeComponents: weekday != null
+          ? DateTimeComponents.dayOfWeekAndTime
+          : DateTimeComponents.time,
     );
   }
 

@@ -8,6 +8,7 @@ import '../models/habit_model.dart';
 import '../providers/habit_provider.dart';
 import '../widgets/streak_badge.dart';
 import '../widgets/week_chart.dart';
+import '../widgets/year_heatmap.dart';
 import 'habit_detail_screen.dart';
 
 class AnalyticsScreen extends StatelessWidget {
@@ -85,6 +86,38 @@ class AnalyticsScreen extends StatelessWidget {
                     child: Center(child: Text('Add habits to see charts')),
                   )
                 : WeekChart(rates: provider.last7DaysRates),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Year at a glance',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Darker = more habits completed that day',
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? Colors.white54 : Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: AppTheme.cardDecoration(context),
+            child: habits.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: Text('Add habits to see activity')),
+                  )
+                : YearHeatmap(
+                    levels: provider.yearHeatmapLevels,
+                    weekStart: provider.weekStart,
+                  ),
           ),
           const SizedBox(height: 24),
           const Text(

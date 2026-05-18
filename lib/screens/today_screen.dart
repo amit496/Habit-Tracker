@@ -12,7 +12,7 @@ import '../widgets/note_dialog.dart';
 import '../widgets/screen_header.dart';
 import '../widgets/streak_badge.dart';
 import 'habit_detail_screen.dart';
-import 'habit_form_screen.dart';
+import '../widgets/add_habit_sheet.dart';
 
 class TodayScreen extends StatelessWidget {
   const TodayScreen({super.key});
@@ -44,8 +44,13 @@ class TodayScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     _CategoryFilterChips(provider: provider),
                     const SizedBox(height: 12),
-                    if (provider.globalStreak > 0)
+                    if (provider.isDateFrozen(today))
+                      _FrozenDayBanner(provider: provider, date: today),
+                    if (provider.globalStreak > 0) ...[
+                      if (provider.isDateFrozen(today))
+                        const SizedBox(height: 12),
                       StreakBadge(streak: provider.globalStreak),
+                    ],
                     const SizedBox(height: 16),
                     _ProgressCard(
                       done: done,
@@ -142,10 +147,7 @@ class TodayScreen extends StatelessWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const HabitFormScreen()),
-        ),
+        onPressed: () => showAddHabitSheet(context),
         child: const Icon(Icons.add_rounded),
       ),
     );
@@ -193,6 +195,48 @@ class TodayScreen extends StatelessWidget {
         MaterialPageRoute(
           builder: (_) => HabitDetailScreen(habit: habit),
         ),
+      ),
+    );
+  }
+}
+
+class _FrozenDayBanner extends StatelessWidget {
+  final HabitProvider provider;
+  final DateTime date;
+
+  const _FrozenDayBanner({required this.provider, required this.date});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryFor(context).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppTheme.primaryFor(context).withValues(alpha: 0.25),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.ac_unit_rounded,
+            size: 20,
+            color: AppTheme.primaryFor(context),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Streak freeze — today won\'t break your streak',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            ),
+          ),
+          TextButton(
+            onPressed: () => provider.unfreezeDate(date),
+            child: const Text('Undo'),
+          ),
+        ],
       ),
     );
   }

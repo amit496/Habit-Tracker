@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../core/constants/habit_categories.dart';
 import '../core/constants/habit_icons.dart';
+import '../core/constants/habit_templates.dart';
 import '../core/constants/reminder_sounds.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/brand.dart';
@@ -16,8 +17,9 @@ import '../services/reminder_sound_storage.dart';
 
 class HabitFormScreen extends StatefulWidget {
   final HabitModel? habit;
+  final HabitTemplate? template;
 
-  const HabitFormScreen({super.key, this.habit});
+  const HabitFormScreen({super.key, this.habit, this.template});
 
   @override
   State<HabitFormScreen> createState() => _HabitFormScreenState();
@@ -57,18 +59,28 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
   void initState() {
     super.initState();
     final h = widget.habit;
-    _name = TextEditingController(text: h?.name ?? '');
+    final t = widget.template;
+    _name = TextEditingController(text: h?.name ?? t?.name ?? '');
     _target = TextEditingController(
-      text: h?.targetCount?.toString() ?? '8',
+      text: h?.targetCount?.toString() ??
+          t?.targetCount?.toString() ??
+          '8',
     );
-    _iconKey = h?.iconKey ?? 'star';
-    _colorValue = h?.colorValue ?? _colors.first;
-    _categoryKey = h?.categoryKey ?? HabitCategories.general;
-    _scheduleDays = h != null && !h.isDaily
-        ? h.scheduleDays.toSet()
-        : {1, 2, 3, 4, 5, 6, 7};
-    _customSchedule = h != null && !h.isDaily;
-    _useTarget = h?.hasTarget ?? false;
+    _iconKey = h?.iconKey ?? t?.iconKey ?? 'star';
+    _colorValue = h?.colorValue ?? t?.colorValue ?? _colors.first;
+    _categoryKey =
+        h?.categoryKey ?? t?.categoryKey ?? HabitCategories.general;
+    if (h != null && !h.isDaily) {
+      _scheduleDays = h.scheduleDays.toSet();
+      _customSchedule = true;
+    } else if (t != null && !t.isDaily) {
+      _scheduleDays = t.scheduleDays.toSet();
+      _customSchedule = true;
+    } else {
+      _scheduleDays = {1, 2, 3, 4, 5, 6, 7};
+      _customSchedule = false;
+    }
+    _useTarget = h?.hasTarget ?? (t?.targetCount != null);
     _useReminder = h?.hasReminder ?? false;
     if (h != null && h.hasReminder) {
       _reminderTime =
@@ -264,12 +276,27 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
       appBar: AppBar(
         title: Text(_isEdit ? 'Edit habit' : 'New habit'),
         actions: [
-          if (_isEdit)
+          if (_isEdit) ...[
+            IconButton(
+              tooltip: 'Duplicate',
+              onPressed: () async {
+                final provider = context.read<HabitProvider>();
+                await provider.duplicateHabit(widget.habit!);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Habit duplicated')),
+                  );
+                  Navigator.pop(context);
+                }
+              },
+              icon: const Icon(Icons.copy_rounded),
+            ),
             IconButton(
               onPressed: _delete,
               icon: const Icon(Icons.delete_outline_rounded,
                   color: AppTheme.danger),
             ),
+          ],
         ],
       ),
       body: ListView(

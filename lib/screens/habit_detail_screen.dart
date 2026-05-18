@@ -31,6 +31,18 @@ class HabitDetailScreen extends StatelessWidget {
         title: Text(habit.name),
         actions: [
           IconButton(
+            tooltip: 'Duplicate',
+            icon: const Icon(Icons.copy_outlined),
+            onPressed: () async {
+              final copy = await provider.duplicateHabit(habit);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Created "${copy.name}"')),
+                );
+              }
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.edit_outlined),
             onPressed: () => Navigator.push(
               context,

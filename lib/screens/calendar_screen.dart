@@ -92,13 +92,46 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-            child: Text(
-              DateFormat('EEEE, MMM d').format(_selected),
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white70 : Colors.black87,
-              ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    DateFormat('EEEE, MMM d').format(_selected),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                    ),
+                  ),
+                ),
+                if (!DateOnly.of(_selected).isAfter(DateOnly.today()))
+                  TextButton.icon(
+                    onPressed: () async {
+                      await provider.toggleFreezeDate(_selected);
+                      if (context.mounted) {
+                        final frozen = provider.isDateFrozen(_selected);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              frozen
+                                  ? 'Streak freeze enabled for this day'
+                                  : 'Streak freeze removed',
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    icon: Icon(
+                      provider.isDateFrozen(_selected)
+                          ? Icons.ac_unit_rounded
+                          : Icons.ac_unit_outlined,
+                      size: 18,
+                    ),
+                    label: Text(
+                      provider.isDateFrozen(_selected) ? 'Frozen' : 'Freeze',
+                    ),
+                  ),
+              ],
             ),
           ),
           Expanded(

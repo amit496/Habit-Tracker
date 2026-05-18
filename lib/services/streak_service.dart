@@ -11,8 +11,9 @@ class StreakService {
 
   static int currentStreakForHabit(
     HabitModel habit,
-    List<HabitLogModel> logs,
-  ) {
+    List<HabitLogModel> logs, {
+    Set<String> frozenDateKeys = const {},
+  }) {
     final byDate = {for (final l in logs) l.dateKey: l};
     var streak = 0;
     var day = DateOnly.today();
@@ -24,6 +25,11 @@ class StreakService {
         continue;
       }
       final key = DateOnly.key(day);
+      if (frozenDateKeys.contains(key)) {
+        streak++;
+        day = day.subtract(const Duration(days: 1));
+        continue;
+      }
       if (!_isDone(habit, byDate[key])) break;
       streak++;
       day = day.subtract(const Duration(days: 1));
@@ -33,12 +39,19 @@ class StreakService {
 
   static int bestStreakForHabit(
     HabitModel habit,
-    List<HabitLogModel> logs,
-  ) {
+    List<HabitLogModel> logs, {
+    Set<String> frozenDateKeys = const {},
+  }) {
     final doneKeys = <String>{};
     for (final l in logs) {
       if (_isDone(habit, l) && habit.isScheduledOn(l.date)) {
         doneKeys.add(l.dateKey);
+      }
+    }
+    for (final key in frozenDateKeys) {
+      final d = DateOnly.parseKey(key);
+      if (d != null && habit.isScheduledOn(d)) {
+        doneKeys.add(key);
       }
     }
     if (doneKeys.isEmpty) return 0;
@@ -69,8 +82,9 @@ class StreakService {
 
   static int globalCurrentStreak(
     List<HabitModel> habits,
-    List<HabitLogModel> allLogs,
-  ) {
+    List<HabitLogModel> allLogs, {
+    Set<String> frozenDateKeys = const {},
+  }) {
     if (habits.isEmpty) return 0;
     var streak = 0;
     var day = DateOnly.today();
@@ -83,6 +97,11 @@ class StreakService {
         continue;
       }
       final key = DateOnly.key(day);
+      if (frozenDateKeys.contains(key)) {
+        streak++;
+        day = day.subtract(const Duration(days: 1));
+        continue;
+      }
       final dayLogs = allLogs.where((l) => l.dateKey == key).toList();
       final allDone = scheduled.every((h) {
         HabitLogModel? log;

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../core/theme/brand.dart';
@@ -9,6 +11,7 @@ import '../services/backup_service.dart';
 import '../services/export_service.dart';
 import '../services/hive_service.dart';
 import '../services/reminder_service.dart';
+import '../services/reminder_sound_storage.dart';
 import '../services/streak_service.dart';
 
 class HabitProvider extends ChangeNotifier {
@@ -17,6 +20,7 @@ class HabitProvider extends ChangeNotifier {
   bool _isDarkMode = false;
   int _weekStart = 1;
   String? _categoryFilter;
+  Set<String> _frozenDateKeys = {};
 
   HabitProvider() {
     loadAll();
@@ -33,6 +37,7 @@ class HabitProvider extends ChangeNotifier {
   bool get isDarkMode => _isDarkMode;
   int get weekStart => _weekStart;
   String? get categoryFilter => _categoryFilter;
+  Set<String> get frozenDateKeys => Set.unmodifiable(_frozenDateKeys);
 
   bool get hasCompletedOnboarding =>
       HiveService.getSetting('onboardingComplete', defaultValue: false) == true;
@@ -87,10 +92,24 @@ class HabitProvider extends ChangeNotifier {
   List<double> last30DaysRatesFor(HabitModel habit) =>
       AnalyticsService.last30DaysRatesFor(habit, _logs);
 
-  int get globalStreak =>
-      StreakService.globalCurrentStreak(activeHabits, _logs);
+  int get globalStreak => StreakService.globalCurrentStreak(
+        activeHabits,
+        _logs,
+        frozenDateKeys: _frozenDateKeys,
+      );
 
   int get monthCompletions => AnalyticsService.completionsThisMonth(_logs);
+
+  List<int> get yearHeatmapLevels =>
+      AnalyticsService.yearHeatmapLevels(activeHabits, _logs);
+
+  bool isDateFrozen(DateTime date) =>
+      _frozenDateKeys.contains(DateOnly.key(DateOnly.of(date)));
+
+  List<String> get frozenDatesSorted {
+    final list = _frozenDateKeys.toList()..sort();
+    return list.reversed.toList();
+  }
 
   void _migrateHabitColorsInHive() {
     for (final key in HiveService.habits.keys.toList()) {
@@ -115,6 +134,10 @@ class HabitProvider extends ChangeNotifier {
     _isDarkMode = HiveService.getSetting('isDarkMode', defaultValue: false);
     _weekStart = (HiveService.getSetting('weekStart', defaultValue: 1) as num)
         .toInt();
+    final rawFrozen = HiveService.getSetting('frozenDates', defaultValue: []);
+    _frozenDateKeys = rawFrozen is List
+        ? rawFrozen.map((e) => e.toString()).toSet()
+        : {};
     _syncReminders();
     notifyListeners();
   }
@@ -224,11 +247,66 @@ class HabitProvider extends ChangeNotifier {
     loadAll();
   }
 
-  int streakFor(HabitModel habit) =>
-      StreakService.currentStreakForHabit(habit, _logsForHabit(habit.id));
+  int streakFor(HabitModel habit) => StreakService.currentStreakForHabit(
+        habit,
+        _logsForHabit(habit.id),
+        frozenDateKeys: _frozenDateKeys,
+      );
 
-  int bestStreakFor(HabitModel habit) =>
-      StreakService.bestStreakForHabit(habit, _logsForHabit(habit.id));
+  int bestStreakFor(HabitModel habit) => StreakService.bestStreakForHabit(
+        habit,
+        _logsForHabit(habit.id),
+        frozenDateKeys: _frozenDateKeys,
+      );
+
+  Future<void> freezeDate(DateTime date) async {
+    final day = DateOnly.of(date);
+    if (day.isAfter(DateOnly.today())) return;
+    _frozenDateKeys.add(DateOnly.key(day));
+    await HiveService.setSetting('frozenDates', _frozenDateKeys.toList()..sort());
+    notifyListeners();
+  }
+
+  Future<void> unfreezeDate(DateTime date) async {
+    _frozenDateKeys.remove(DateOnly.key(DateOnly.of(date)));
+    await HiveService.setSetting('frozenDates', _frozenDateKeys.toList()..sort());
+    notifyListeners();
+  }
+
+  Future<void> toggleFreezeDate(DateTime date) async {
+    if (isDateFrozen(date)) {
+      await unfreezeDate(date);
+    } else {
+      await freezeDate(date);
+    }
+  }
+
+  Future<HabitModel> duplicateHabit(HabitModel habit) async {
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    var customPath = '';
+    if (habit.reminderCustomSoundPath.isNotEmpty) {
+      final source = File(habit.reminderCustomSoundPath);
+      if (await source.exists()) {
+        customPath = await ReminderSoundStorage.copyCustomSound(source, id);
+      }
+    }
+    final copy = HabitModel(
+      id: id,
+      name: '${habit.name} (copy)',
+      iconKey: habit.iconKey,
+      colorValue: habit.colorValue,
+      targetCount: habit.targetCount,
+      createdAt: DateTime.now(),
+      reminderHour: habit.reminderHour,
+      reminderMinute: habit.reminderMinute,
+      reminderSoundKey: habit.reminderSoundKey,
+      reminderCustomSoundPath: customPath,
+      categoryKey: habit.categoryKey,
+      scheduleDays: habit.scheduleDays,
+    );
+    await addHabit(copy);
+    return copy;
+  }
 
   List<HabitLogModel> _logsForHabit(String habitId) =>
       _logs.where((l) => l.habitId == habitId).toList();
@@ -295,6 +373,7 @@ class HabitProvider extends ChangeNotifier {
       logs: _logs,
       isDarkMode: _isDarkMode,
       weekStart: _weekStart,
+      frozenDates: _frozenDateKeys.toList()..sort(),
     );
     await BackupService.shareJson(json);
   }
@@ -313,6 +392,7 @@ class HabitProvider extends ChangeNotifier {
     _weekStart = result.weekStart;
     await HiveService.setSetting('isDarkMode', _isDarkMode);
     await HiveService.setSetting('weekStart', _weekStart);
+    await HiveService.setSetting('frozenDates', result.frozenDates);
     loadAll();
   }
 }

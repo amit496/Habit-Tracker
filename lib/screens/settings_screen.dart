@@ -2,7 +2,10 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+
+import '../core/utils/date_utils.dart';
 
 import '../core/constants/habit_categories.dart';
 import '../core/theme/app_theme.dart';
@@ -73,6 +76,58 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
+          _section(context, 'Streak freeze'),
+          _card(
+            isDark: isDark,
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Icon(
+                    Icons.ac_unit_rounded,
+                    color: AppTheme.primaryFor(context),
+                  ),
+                  title: const Text('Freeze today'),
+                  subtitle: const Text(
+                    'Missed habits won\'t break streaks today',
+                  ),
+                  onTap: () async {
+                    if (provider.isDateFrozen(DateOnly.today())) {
+                      await provider.unfreezeDate(DateOnly.today());
+                    } else {
+                      await provider.freezeDate(DateOnly.today());
+                    }
+                  },
+                  trailing: Switch(
+                    value: provider.isDateFrozen(DateOnly.today()),
+                    onChanged: (_) async {
+                      await provider.toggleFreezeDate(DateOnly.today());
+                    },
+                    activeTrackColor: AppTheme.primary,
+                  ),
+                ),
+                if (provider.frozenDatesSorted.isNotEmpty) ...[
+                  const Divider(height: 1),
+                  ...provider.frozenDatesSorted.take(8).map((key) {
+                    final d = DateOnly.parseKey(key);
+                    final label = d != null
+                        ? DateFormat('MMM d, yyyy').format(d)
+                        : key;
+                    return ListTile(
+                      dense: true,
+                      title: Text(label),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        onPressed: () {
+                          if (d != null) provider.unfreezeDate(d);
+                        },
+                      ),
+                    );
+                  }),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
           _section(context, 'Data & backup'),
           _card(
             isDark: isDark,
@@ -131,6 +186,21 @@ class SettingsScreen extends StatelessWidget {
                 'Reminders need a full app restart after install (not hot restart).',
                 style: TextStyle(fontSize: 12, color: AppTheme.primary),
               ),
+            ),
+          if (Platform.isAndroid || Platform.isIOS)
+            FutureBuilder<bool>(
+              future: ReminderService.areNotificationsEnabled(),
+              builder: (context, snap) {
+                if (snap.data != false) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Notifications are off. Open system Settings → HabitFlow → '
+                    'Notifications and allow alerts and sound.',
+                    style: TextStyle(fontSize: 12, color: AppTheme.primary),
+                  ),
+                );
+              },
             ),
           const SizedBox(height: 20),
           _section(context, 'Active habits'),
