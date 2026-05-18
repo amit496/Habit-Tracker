@@ -16,6 +16,7 @@ import '../services/reminder_service.dart';
 import '../widgets/habit_flow_logo.dart';
 import '../widgets/screen_header.dart';
 import 'habit_form_screen.dart';
+import 'tutorial_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -73,6 +74,26 @@ class SettingsScreen extends StatelessWidget {
                   );
                 }
               },
+            ),
+          ),
+          const SizedBox(height: 20),
+          _section(context, 'Help'),
+          _card(
+            isDark: isDark,
+            child: ListTile(
+              leading: Icon(
+                Icons.school_rounded,
+                color: AppTheme.primaryFor(context),
+              ),
+              title: const Text('App tutorial'),
+              subtitle: const Text(
+                'How to use Today, Calendar, Stats, and more',
+              ),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TutorialScreen()),
+              ),
             ),
           ),
           const SizedBox(height: 20),

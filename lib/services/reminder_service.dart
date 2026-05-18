@@ -242,7 +242,7 @@ class ReminderService {
     );
   }
 
-  /// Play a one-shot preview (habit form "Test sound").
+  /// Play a one-shot preview (habit form "Play preview").
   static Future<void> previewSound(HabitModel habit) async {
     if (!_ready) return;
     await _plugin.show(

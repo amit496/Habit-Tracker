@@ -26,7 +26,8 @@ void showAddHabitSheet(BuildContext context) {
                 Icons.edit_rounded,
                 color: AppTheme.primaryFor(ctx),
               ),
-              title: const Text('Create from scratch'),
+              title: const Text('Create custom habit'),
+              subtitle: const Text('Set up your own details'),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -42,7 +43,7 @@ void showAddHabitSheet(BuildContext context) {
             ),
             const SizedBox(height: 8),
             Text(
-              'Templates',
+              'Quick start',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,

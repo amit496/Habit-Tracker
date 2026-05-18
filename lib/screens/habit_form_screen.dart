@@ -116,14 +116,14 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
     final name = _name.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a habit name')),
+        const SnackBar(content: Text('Please enter a habit name')),
       );
       return;
     }
 
     if (_customSchedule && _scheduleDays.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pick at least one day')),
+        const SnackBar(content: Text('Select at least one day')),
       );
       return;
     }
@@ -133,7 +133,7 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
       target = int.tryParse(_target.text.trim());
       if (target == null || target < 1) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Enter a valid target count')),
+          const SnackBar(content: Text('Enter a valid daily target')),
         );
         return;
       }
@@ -153,7 +153,9 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
         soundKey == ReminderSounds.customKey &&
         customPath.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pick a custom sound or choose a default')),
+        const SnackBar(
+          content: Text('Select a custom sound or choose a built-in tone'),
+        ),
       );
       return;
     }
@@ -217,7 +219,7 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not load sound: $e')),
+          SnackBar(content: Text('Unable to load audio file: $e')),
         );
       }
     }
@@ -238,7 +240,7 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
     await ReminderService.previewSound(preview);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Playing preview…')),
+        const SnackBar(content: Text('Now playing preview')),
       );
     }
   }
@@ -248,7 +250,9 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete habit?'),
-        content: const Text('This removes the habit and all its history.'),
+        content: const Text(
+          'This will permanently remove the habit and all associated history.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -284,7 +288,7 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
                 await provider.duplicateHabit(widget.habit!);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Habit duplicated')),
+                    const SnackBar(content: Text('Habit duplicated successfully')),
                   );
                   Navigator.pop(context);
                 }
@@ -396,13 +400,13 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
           const SizedBox(height: 20),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Custom weekly schedule'),
+            title: const Text('Weekly schedule'),
             subtitle: Text(
               _customSchedule
                   ? _scheduleDays.isEmpty
-                      ? 'Pick days below'
+                      ? 'Select days below'
                       : _scheduleLabel(_scheduleDays.toList())
-                  : 'Every day',
+                  : 'Repeats every day',
             ),
             value: _customSchedule,
             onChanged: (v) => setState(() {
@@ -436,8 +440,8 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
           const SizedBox(height: 12),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Daily target count'),
-            subtitle: const Text('e.g. 8 glasses of water'),
+            title: const Text('Daily target'),
+            subtitle: const Text('Track a number each day (e.g. 8 glasses)'),
             value: _useTarget,
             onChanged: (v) => setState(() => _useTarget = v),
           ),
@@ -445,7 +449,10 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
             TextField(
               controller: _target,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Target per day'),
+              decoration: const InputDecoration(
+                labelText: 'Daily target',
+                hintText: 'e.g. 8',
+              ),
             ),
           const SizedBox(height: 12),
           SwitchListTile(
@@ -453,8 +460,8 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
             title: const Text('Daily reminder'),
             subtitle: Text(
               _useReminder
-                  ? 'Notify at ${_reminderTime.format(context)}'
-                  : 'Off',
+                  ? 'Daily at ${_reminderTime.format(context)}'
+                  : 'Not set',
             ),
             value: _useReminder,
             onChanged: (v) => setState(() => _useReminder = v),
@@ -476,7 +483,7 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Reminder sound',
+              'Notification tone',
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
@@ -496,7 +503,7 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
                 ChoiceChip(
                   label: Text(
                     _customSoundLabel.isEmpty
-                        ? 'Custom'
+                        ? 'Custom audio'
                         : _customSoundLabel,
                   ),
                   avatar: const Icon(Icons.audio_file_rounded, size: 18),
@@ -514,8 +521,8 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
                 icon: const Icon(Icons.folder_open_rounded),
                 label: Text(
                   _customSoundLabel.isEmpty
-                      ? 'Choose music / audio file'
-                      : 'Change: $_customSoundLabel',
+                      ? 'Select audio file'
+                      : 'Replace audio file',
                 ),
               ),
             ],
@@ -523,13 +530,13 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
             OutlinedButton.icon(
               onPressed: ReminderService.isReady ? _testReminderSound : null,
               icon: const Icon(Icons.volume_up_rounded),
-              label: const Text('Test sound'),
+              label: const Text('Play preview'),
             ),
             if (!ReminderService.isReady)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(
-                  'Sounds need a full app restart (not hot restart).',
+                  'Fully close and reopen the app to enable notification sounds.',
                   style: TextStyle(fontSize: 12, color: AppTheme.primary),
                 ),
               ),
@@ -538,8 +545,8 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
             const SizedBox(height: 8),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Archived'),
-              subtitle: const Text('Hide from Today but keep history'),
+              title: const Text('Archive habit'),
+              subtitle: const Text('Hidden from Today; history is preserved'),
               value: _archived,
               onChanged: (v) => setState(() => _archived = v),
             ),
