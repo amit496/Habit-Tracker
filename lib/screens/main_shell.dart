@@ -16,20 +16,30 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _index = 0;
 
-  static const _pages = [
-    TodayScreen(),
-    CalendarScreen(),
-    AnalyticsScreen(),
-    SettingsScreen(),
-  ];
+  Widget _pageFor(int index) {
+    switch (index) {
+      case 0:
+        return const TodayScreen();
+      case 1:
+        return const CalendarScreen();
+      case 2:
+        return const AnalyticsScreen();
+      case 3:
+        return const SettingsScreen();
+      default:
+        return const TodayScreen();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      body: IndexedStack(index: _index, children: _pages),
-      bottomNavigationBar: Container(
+      body: _pageFor(_index),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Container(
         decoration: BoxDecoration(
           border: Border(
             top: BorderSide(
@@ -63,6 +73,7 @@ class _MainShellState extends State<MainShell> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

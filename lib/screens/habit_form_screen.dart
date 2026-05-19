@@ -226,9 +226,18 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
   }
 
   Future<void> _testReminderSound() async {
+    if (_useReminder &&
+        _reminderSoundKey == ReminderSounds.customKey &&
+        _customSoundPath.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select an audio file first')),
+      );
+      return;
+    }
+
     final preview = HabitModel(
       id: widget.habit?.id ?? 'preview',
-      name: _name.text.trim().isEmpty ? 'Test' : _name.text.trim(),
+      name: _name.text.trim().isEmpty ? 'Preview' : _name.text.trim(),
       iconKey: _iconKey,
       colorValue: _colorValue,
       createdAt: DateTime.now(),
@@ -237,11 +246,20 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
       reminderSoundKey: _reminderSoundKey,
       reminderCustomSoundPath: _customSoundPath,
     );
-    await ReminderService.previewSound(preview);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Now playing preview')),
-      );
+
+    try {
+      await ReminderService.previewSound(preview);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Playing selected tone')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not play sound: $e')),
+        );
+      }
     }
   }
 
@@ -528,7 +546,7 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
             ],
             const SizedBox(height: 8),
             OutlinedButton.icon(
-              onPressed: ReminderService.isReady ? _testReminderSound : null,
+              onPressed: _testReminderSound,
               icon: const Icon(Icons.volume_up_rounded),
               label: const Text('Play preview'),
             ),
@@ -536,7 +554,8 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(
-                  'Fully close and reopen the app to enable notification sounds.',
+                  'Scheduled reminders need a full app restart after install. '
+                  'Preview works here without restart.',
                   style: TextStyle(fontSize: 12, color: AppTheme.primary),
                 ),
               ),

@@ -11,6 +11,11 @@ import 'services/reminder_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('FlutterError: ${details.exceptionAsString()}');
+  };
+
   await Hive.initFlutter();
   await HiveService.init();
   await ReminderService.init();

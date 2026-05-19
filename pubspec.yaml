@@ -24,6 +24,7 @@ dependencies:
   timezone: ^0.9.4
   file_picker: ^8.1.7
   path_provider: ^2.1.5
+  audioplayers: ^6.1.0
 
 dev_dependencies:
   flutter_test:
@@ -43,3 +44,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/app_icon.png
+    - assets/sounds/

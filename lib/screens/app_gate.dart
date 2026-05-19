@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -16,15 +18,13 @@ class AppGate extends StatefulWidget {
 
 class _AppGateState extends State<AppGate> with WidgetsBindingObserver {
   bool _showSplash = true;
+  Timer? _splashTimer;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _scheduleLeaveSplash();
-  }
-
-  void _scheduleLeaveSplash() {
+    _splashTimer = Timer(const Duration(milliseconds: 1500), _leaveSplash);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 1400), _leaveSplash);
     });
@@ -37,7 +37,6 @@ class _AppGateState extends State<AppGate> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Timer may not fire while app is backgrounded — leave splash on resume.
     if (state == AppLifecycleState.resumed && _showSplash) {
       _leaveSplash();
     }
@@ -45,6 +44,7 @@ class _AppGateState extends State<AppGate> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _splashTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -55,7 +55,10 @@ class _AppGateState extends State<AppGate> with WidgetsBindingObserver {
       return const SplashScreen();
     }
 
-    final done = context.watch<HabitProvider>().hasCompletedOnboarding;
-    return done ? const MainShell() : const OnboardingScreen();
+    final provider = context.watch<HabitProvider>();
+    if (provider.hasCompletedOnboarding) {
+      return const MainShell();
+    }
+    return const OnboardingScreen();
   }
 }

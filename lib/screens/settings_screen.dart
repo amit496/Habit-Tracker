@@ -11,7 +11,6 @@ import '../core/constants/habit_categories.dart';
 import '../core/theme/app_theme.dart';
 import '../models/habit_model.dart';
 import '../providers/habit_provider.dart';
-import '../services/hive_service.dart';
 import '../services/reminder_service.dart';
 import '../widgets/habit_flow_logo.dart';
 import '../widgets/screen_header.dart';
@@ -65,14 +64,7 @@ class SettingsScreen extends StatelessWidget {
               leading: const Icon(Icons.replay_rounded),
               title: const Text('Show onboarding again'),
               onTap: () async {
-                await HiveService.setSetting('onboardingComplete', false);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Restart the app to see onboarding'),
-                    ),
-                  );
-                }
+                await provider.resetOnboarding();
               },
             ),
           ),

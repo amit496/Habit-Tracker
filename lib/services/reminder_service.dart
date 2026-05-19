@@ -9,6 +9,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../core/constants/reminder_sounds.dart';
 import '../models/habit_model.dart';
+import 'reminder_sound_player.dart';
 
 class ReminderService {
   ReminderService._();
@@ -18,7 +19,6 @@ class ReminderService {
 
   static bool _ready = false;
   static const int _idBase = 2000;
-  static const int _previewId = 9999;
   static const int _maxIdsPerHabit = 7;
 
   /// Vibration pattern: wait 0ms, vibrate 400ms, pause 200ms, vibrate 400ms.
@@ -120,13 +120,38 @@ class ReminderService {
     }
 
     await android.createNotificationChannel(
-      const AndroidNotificationChannel(
+      AndroidNotificationChannel(
         'habit_reminders_v2_custom',
         'Habit reminders · Custom',
         description: 'Your own reminder audio file',
         importance: Importance.high,
         playSound: true,
         enableVibration: true,
+        vibrationPattern: _vibrationPattern,
+      ),
+    );
+  }
+
+  static Future<void> _ensureCustomChannel(String filePath) async {
+    if (!Platform.isAndroid || filePath.isEmpty || !File(filePath).existsSync()) {
+      return;
+    }
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android == null) return;
+
+    const channelId = 'habit_reminders_v2_custom';
+    await android.deleteNotificationChannel(channelId);
+    await android.createNotificationChannel(
+      AndroidNotificationChannel(
+        channelId,
+        'Habit reminders · Custom',
+        description: 'Your own reminder audio file',
+        importance: Importance.high,
+        playSound: true,
+        enableVibration: true,
+        vibrationPattern: _vibrationPattern,
+        sound: UriAndroidNotificationSound(Uri.file(filePath).toString()),
       ),
     );
   }
@@ -206,6 +231,11 @@ class ReminderService {
     int notificationId, {
     int? weekday,
   }) async {
+    if (habit.reminderSoundKey == ReminderSounds.customKey &&
+        habit.reminderCustomSoundPath.isNotEmpty) {
+      await _ensureCustomChannel(habit.reminderCustomSoundPath);
+    }
+
     final now = tz.TZDateTime.now(tz.local);
     var scheduled = tz.TZDateTime(
       tz.local,
@@ -242,17 +272,8 @@ class ReminderService {
     );
   }
 
-  /// Play a one-shot preview (habit form "Play preview").
+  /// Plays the selected tone immediately (works while the app is open).
   static Future<void> previewSound(HabitModel habit) async {
-    if (!_ready) return;
-    await _plugin.show(
-      _previewId,
-      'HabitFlow preview',
-      'Sound: ${ReminderSounds.labelFor(habit.reminderSoundKey)}',
-      _detailsFor(habit),
-    );
-    Future.delayed(const Duration(seconds: 2), () {
-      _plugin.cancel(_previewId);
-    });
+    await ReminderSoundPlayer.preview(habit);
   }
 }

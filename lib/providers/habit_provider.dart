@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../core/theme/brand.dart';
@@ -39,8 +40,11 @@ class HabitProvider extends ChangeNotifier {
   String? get categoryFilter => _categoryFilter;
   Set<String> get frozenDateKeys => Set.unmodifiable(_frozenDateKeys);
 
-  bool get hasCompletedOnboarding =>
-      HiveService.getSetting('onboardingComplete', defaultValue: false) == true;
+  bool get hasCompletedOnboarding {
+    final value =
+        HiveService.getSetting('onboardingComplete', defaultValue: false);
+    return value == true || value == 1 || value == 'true';
+  }
 
   List<HabitModel> habitsForDate(DateTime date, {bool includeRest = false}) {
     final day = DateOnly.of(date);
@@ -113,27 +117,66 @@ class HabitProvider extends ChangeNotifier {
 
   void _migrateHabitColorsInHive() {
     for (final key in HiveService.habits.keys.toList()) {
-      final raw = Map<dynamic, dynamic>.from(HiveService.habits.get(key) as Map);
-      final old = (raw['colorValue'] as num?)?.toInt();
-      final normalized = Brand.normalizeHabitColor(old);
-      if (old != normalized) {
-        raw['colorValue'] = normalized;
-        HiveService.habits.put(key, raw);
+      try {
+        final value = HiveService.habits.get(key);
+        if (value is! Map) continue;
+        final raw = Map<dynamic, dynamic>.from(value);
+        final old = (raw['colorValue'] as num?)?.toInt();
+        final normalized = Brand.normalizeHabitColor(old);
+        if (old != normalized) {
+          raw['colorValue'] = normalized;
+          HiveService.habits.put(key, raw);
+        }
+      } catch (e) {
+        debugPrint('HabitProvider: skip corrupt habit $key ($e)');
       }
     }
   }
 
+  static int _readWeekStart(dynamic value) {
+    if (value is int) return value == 7 ? 7 : 1;
+    if (value is num) return value.toInt() == 7 ? 7 : 1;
+    if (value is String) return int.tryParse(value) == 7 ? 7 : 1;
+    return 1;
+  }
+
   void loadAll() {
-    _migrateHabitColorsInHive();
-    _habits = HiveService.habits.values
-        .map((e) => HabitModel.fromMap(Map<dynamic, dynamic>.from(e as Map)))
-        .toList();
-    _logs = HiveService.logs.values
-        .map((e) => HabitLogModel.fromMap(Map<dynamic, dynamic>.from(e as Map)))
-        .toList();
-    _isDarkMode = HiveService.getSetting('isDarkMode', defaultValue: false);
-    _weekStart = (HiveService.getSetting('weekStart', defaultValue: 1) as num)
-        .toInt();
+    try {
+      _migrateHabitColorsInHive();
+    } catch (e, st) {
+      debugPrint('HabitProvider: migrate failed $e\n$st');
+    }
+
+    final habits = <HabitModel>[];
+    for (final entry in HiveService.habits.values) {
+      try {
+        if (entry is! Map) continue;
+        habits.add(
+          HabitModel.fromMap(Map<dynamic, dynamic>.from(entry)),
+        );
+      } catch (e) {
+        debugPrint('HabitProvider: skip corrupt habit entry ($e)');
+      }
+    }
+    _habits = habits;
+
+    final logs = <HabitLogModel>[];
+    for (final entry in HiveService.logs.values) {
+      try {
+        if (entry is! Map) continue;
+        logs.add(
+          HabitLogModel.fromMap(Map<dynamic, dynamic>.from(entry)),
+        );
+      } catch (e) {
+        debugPrint('HabitProvider: skip corrupt log entry ($e)');
+      }
+    }
+    _logs = logs;
+
+    _isDarkMode = HiveService.getSetting('isDarkMode', defaultValue: false) == true;
+    _weekStart = _readWeekStart(
+      HiveService.getSetting('weekStart', defaultValue: 1),
+    );
     final rawFrozen = HiveService.getSetting('frozenDates', defaultValue: []);
     _frozenDateKeys = rawFrozen is List
         ? rawFrozen.map((e) => e.toString()).toSet()
@@ -150,6 +193,11 @@ class HabitProvider extends ChangeNotifier {
 
   Future<void> completeOnboarding() async {
     await HiveService.setSetting('onboardingComplete', true);
+    notifyListeners();
+  }
+
+  Future<void> resetOnboarding() async {
+    await HiveService.setSetting('onboardingComplete', false);
     notifyListeners();
   }
 

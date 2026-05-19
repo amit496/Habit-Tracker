@@ -5,7 +5,6 @@ import '../core/theme/app_theme.dart';
 import '../core/theme/brand.dart';
 import '../providers/habit_provider.dart';
 import '../widgets/habit_flow_logo.dart';
-import 'main_shell.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -26,11 +25,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _finish() async {
     await context.read<HabitProvider>().completeOnboarding();
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const MainShell()),
-    );
+    // AppGate rebuilds to MainShell when onboarding is complete.
   }
 
   @override
