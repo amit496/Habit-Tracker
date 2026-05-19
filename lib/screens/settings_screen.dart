@@ -12,9 +12,10 @@ import '../core/theme/app_theme.dart';
 import '../models/habit_model.dart';
 import '../providers/habit_provider.dart';
 import '../services/reminder_service.dart';
-import '../widgets/habit_flow_logo.dart';
 import '../widgets/screen_header.dart';
+import 'about_screen.dart';
 import 'habit_form_screen.dart';
+import 'legal_document_screen.dart';
 import 'tutorial_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -239,22 +240,50 @@ class SettingsScreen extends StatelessWidget {
               (h) => _habitTile(context, h, isDark, provider, archived: true),
             ),
           ],
-          const SizedBox(height: 32),
+          const SizedBox(height: 20),
+          _section(context, 'Legal'),
           _card(
             isDark: isDark,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  const HabitFlowLogoTile(size: 80),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'HabitFlow',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Icon(
+                    Icons.info_outline_rounded,
+                    color: AppTheme.primaryFor(context),
                   ),
-                  const Text('v1.2.0 • Offline habit tracker'),
-                ],
-              ),
+                  title: const Text('About'),
+                  subtitle: const Text('Version, contact, and licenses'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AboutScreen()),
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.privacy_tip_outlined),
+                  title: const Text('Privacy Policy'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => LegalDocumentScreen.privacyPolicy(),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.gavel_rounded),
+                  title: const Text('Terms of Service'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => LegalDocumentScreen.termsOfService(),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

@@ -84,9 +84,15 @@ lib/
 
 See [docs/WORKFLOW.md](docs/WORKFLOW.md) for screen flow and Hive boxes.
 
-## Privacy
+## Privacy & legal
 
 All data stays on your device. HabitFlow does not send habit data to any server.
+
+**Everything is in the app** — no website needed for users:
+
+**Settings → Legal** → Privacy Policy, Terms of Service, About
+
+For Google Play submission (one public URL for the store form only): see [docs/PLAY_STORE.md](docs/PLAY_STORE.md). Copy text from [docs/PRIVACY_POLICY.md](docs/PRIVACY_POLICY.md) if you use free Google Sites.
 
 ## License
 
